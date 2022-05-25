@@ -109,19 +109,21 @@ class ViewController: UIViewController {
     // MARK: - Private functions
     
     private func updateTimerLabel(minutes: Int, seconds: Int) {
-        if isWorkMode {
-            minutesString = "\(minutes)"
-            secondsString = "0\(seconds)"
-            timerLabel.textColor = .systemRed
-            controlButton.tintColor = .systemRed
-            controlButton.setImage(UIImage(systemName: Strings.playButtonStateImage), for: .normal)
-        } else {
+        if minutes < 10 {
             minutesString = "0\(minutes)"
-            secondsString = "0\(seconds)"
-            timerLabel.textColor = .systemGreen
-            controlButton.tintColor = .systemGreen
-            controlButton.setImage(UIImage(systemName: Strings.playButtonStateImage), for: .normal)
+        } else {
+            minutesString = "\(minutes)"
         }
+            
+        if seconds < 10 {
+            secondsString = "0\(seconds)"
+        } else {
+            secondsString = "\(seconds)"
+        }
+            
+        timerLabel.textColor = isWorkMode ? .systemRed : .systemGreen
+        controlButton.tintColor = isWorkMode ? .systemRed : .systemGreen
+        controlButton.setImage(UIImage(systemName: isStarted ? Strings.pauseButtonStateImage : Strings.playButtonStateImage), for: .normal)
         timerLabel.text = "\(minutesString):\(secondsString)"
     }
     
@@ -147,6 +149,7 @@ class ViewController: UIViewController {
         durationTimer = 1500
         animationDuration = 1500
         circularProgressBar.backgroundLayer.strokeColor = UIColor.systemRed.cgColor
+        circularProgressBar.stopAnimation()
         updateTimerLabel(minutes: minutes, seconds: seconds)
     }
     
@@ -159,6 +162,7 @@ class ViewController: UIViewController {
         durationTimer = 300
         animationDuration = 300
         circularProgressBar.backgroundLayer.strokeColor = UIColor.systemGreen.cgColor
+        circularProgressBar.stopAnimation()
         updateTimerLabel(minutes: minutes, seconds: seconds)
     }
     
@@ -166,23 +170,22 @@ class ViewController: UIViewController {
         isStarted.toggle()
         
         if isStarted {
-            controlButton.setImage(UIImage(systemName: Strings.stopButtonStateImage), for: .normal)
+            controlButton.setImage(UIImage(systemName: Strings.pauseButtonStateImage), for: .normal)
             timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerAction), userInfo: nil, repeats: true)
             circularProgressBar.addAnimation(duration: animationDuration)
         } else {
             controlButton.setImage(UIImage(systemName: Strings.playButtonStateImage), for: .normal)
             timer.invalidate()
-            circularProgressBar.stopAnimation()
+            circularProgressBar.pauseAnimation()
             
             if isWorkMode {
-                minutes = 25
-                seconds = 0
-                durationTimer = 1500
+                animationDuration -= Double(1500 - durationTimer)
+                print(animationDuration)
             } else {
-                minutes = 5
-                seconds = 0
-                durationTimer = 300
+                animationDuration -= Double(300 - durationTimer)
+                print(animationDuration)
             }
+            
             
             updateTimerLabel(minutes: minutes, seconds: seconds)
         }
@@ -208,19 +211,7 @@ class ViewController: UIViewController {
         seconds -= 1
         durationTimer -= 1
         
-        if minutes < 10 {
-            minutesString = "0\(minutes)"
-        } else {
-            minutesString = "\(minutes)"
-        }
-        
-        if seconds < 10 {
-            secondsString = "0\(seconds)"
-        } else {
-            secondsString = "\(seconds)"
-        }
-        
-        timerLabel.text = "\(minutesString):\(secondsString)"
+        updateTimerLabel(minutes: minutes, seconds: seconds)
     }
 }
 
@@ -240,7 +231,7 @@ extension ViewController {
     
     enum Strings {
         static let playButtonStateImage: String = "play"
-        static let stopButtonStateImage: String = "stop"
+        static let pauseButtonStateImage: String = "pause"
         static let workModeButtonTitle: String = "Work"
         static let restModeButtonTitle: String = "Rest"
         static let timerLabelInitialValue: String = "25:00"
@@ -295,6 +286,13 @@ class CircularProgressBar: UIView {
     }
     
     func stopAnimation() {
+        progressLayer.strokeEnd = 0
+        progressLayer.removeAnimation(forKey: "progressAnim")
+    }
+    
+    func pauseAnimation() {
+        guard let presentation = progressLayer.presentation() else { return }
+        progressLayer.strokeEnd = presentation.strokeEnd
         progressLayer.removeAnimation(forKey: "progressAnim")
     }
 }
